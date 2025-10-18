@@ -1,7 +1,7 @@
-import pkg from '@slack/bolt'
+import pkg from "@slack/bolt";
 const { App } = pkg;
-import fs from 'fs';
-import dotenv from 'dotenv';
+import fs from "fs";
+import dotenv from "dotenv";
 
 dotenv.config();
 
@@ -12,8 +12,8 @@ const app = new App({
   socketMode: true,
 });
 
-const DRAFT_FILE = './draftOrder.json';
-let draft = JSON.parse(fs.readFileSync(DRAFT_FILE, 'utf8'));
+const DRAFT_FILE = "./draftOrder.json";
+let draft = JSON.parse(fs.readFileSync(DRAFT_FILE, "utf8"));
 
 const TOTAL_ROUNDS = 5;
 
@@ -22,29 +22,30 @@ function saveDraft() {
 }
 
 async function postNextPick() {
-  const userId = draft.order[draft.currentIndex];
+  const userId = draft.round[draft.currentRound - 1][draft.currentIndex];
   const round = draft.currentRound;
 
   const result = await app.client.chat.postMessage({
     channel: process.env.SLACK_CHANNEL,
-    text: `📢 Round ${round}, Pick ${draft.currentIndex + 1}: <@${userId}> you’re up! Reply to this message with your pick.`,
+    text: `📢 Round ${round}, Pick ${
+      draft.currentIndex + 1
+    }: <@${userId}> you’re up! Reply to this message with your pick.`,
   });
 
   draft.currentThread = result.ts;
   saveDraft();
 }
 
-app.event('message', async ({ event, say }) => {
-
-  console.log('Message event received:', {
+app.event("message", async ({ event, say }) => {
+  console.log("Message event received:", {
     user: event.user,
     text: event.text,
     thread_ts: event.thread_ts,
     currentThread: draft.currentThread,
     currentUser: draft.order[draft.currentIndex],
-  })
+  });
   // Ignore bot messages
-  if (event.subtype === 'bot_message') return;
+  if (event.subtype === "bot_message") return;
 
   // Only handle replies in the current thread
   if (event.thread_ts && event.thread_ts === draft.currentThread) {
@@ -65,16 +66,18 @@ app.event('message', async ({ event, say }) => {
       // Announce pick
       await app.client.chat.postMessage({
         channel: process.env.DRAFT_CHANNEL_ID,
-        text: `✅ Round ${round}, Pick ${draft.currentIndex + 1}: <@${currentUser}> drafted *${pick}*!`,
+        text: `✅ Round ${round}, Pick ${
+          draft.currentIndex + 1
+        }: <@${currentUser}> drafted *${pick}*!`,
       });
 
       // Move to next pick
       draft.currentIndex++;
 
       // If we’ve reached the end of the order, move to next round
-      if (draft.currentIndex >= draft.order.length) {
-        draft.currentIndex = 0;
+      if (draft.currentIndex >= draft.round[draft.currentRound - 1].length) {
         draft.currentRound++;
+        draft.currentIndex = 0;
       }
 
       // If draft complete
@@ -97,7 +100,7 @@ app.event('message', async ({ event, say }) => {
 });
 
 // Start the draft manually with a slash command
-app.command('/startdraft', async ({ ack, respond }) => {
+app.command("/startdraft", async ({ ack, respond }) => {
   await ack();
   draft.currentIndex = 0;
   draft.currentRound = 1;
@@ -110,5 +113,5 @@ app.command('/startdraft', async ({ ack, respond }) => {
 
 (async () => {
   await app.start(process.env.PORT || 3000);
-  console.log('⚾ Fantasy Draft Bot is running!');
+  console.log("⚾ Fantasy Draft Bot is running!");
 })();
