@@ -22,7 +22,7 @@ function saveDraft() {
 }
 
 async function postNextPick() {
-  const userId = draft.round[draft.currentRound - 1][draft.currentIndex];
+  const userId = draft.rounds[draft.currentRound - 1][draft.currentIndex];
   const round = draft.currentRound;
 
   const result = await app.client.chat.postMessage({
@@ -75,7 +75,7 @@ app.event("message", async ({ event, say }) => {
       draft.currentIndex++;
 
       // If we’ve reached the end of the order, move to next round
-      if (draft.currentIndex >= draft.round[draft.currentRound - 1].length) {
+      if (draft.currentIndex >= draft.rounds[draft.currentRound - 1].length) {
         draft.currentRound++;
         draft.currentIndex = 0;
       }
