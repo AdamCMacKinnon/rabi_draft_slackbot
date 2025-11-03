@@ -2,8 +2,14 @@ import pkg from "@slack/bolt";
 const { App } = pkg;
 import fs from "fs";
 import dotenv from "dotenv";
+import { calculateDeadline, formatDeadline } from "./timing.js";
 
 dotenv.config();
+
+const deadline = calculateDeadline();
+const formatted = formatDeadline(deadline);
+
+let draftActive = false;
 
 const app = new App({
   token: process.env.SLACK_BOT_TOKEN,
@@ -29,7 +35,7 @@ async function postNextPick() {
     channel: process.env.SLACK_CHANNEL,
     text: `📢 Round ${round}, Pick ${
       draft.currentIndex + 1
-    }: <@${userId}> you’re up! Reply to this message with your pick.`,
+    }: <@${userId}> you’re up! Reply to this message with your pick.  Your time expires at ${formatted}.`,
   });
 
   draft.currentThread = result.ts;
@@ -110,6 +116,14 @@ app.command("/startdraft", async ({ ack, respond }) => {
   await respond(`🏁 Starting the draft! Total rounds: ${TOTAL_ROUNDS}`);
   await postNextPick();
 });
+
+app.command("/stopdraft", async ({ ack, say }) => {
+  await ack();
+  draftActive = false; // turn off the bot
+  await say("🚨 The draft has been *paused* by admin. No further picks will be processed.");
+  console.log("🛑 Draft paused by admin via killswitch.");
+});
+
 
 (async () => {
   await app.start(process.env.PORT || 3000);
